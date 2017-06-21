@@ -17,8 +17,8 @@
  * ndnSIM, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  **/
 
-#ifndef NDN_KITE_UPLOAD_MOBILE_H
-#define NDN_KITE_UPLOAD_MOBILE_H
+#ifndef NDN_KITE_PUSH_PRODUCER_H
+#define NDN_KITE_PUSH_PRODUCER_H
 
 #include "ns3/ndnSIM/model/ndn-common.hpp"
 
@@ -33,51 +33,45 @@ namespace ndn {
 
 /**
  * @ingroup ndn-apps
- * @brief A simple Interest-sink applia simple Interest-sink application
- *
- * A simple Interest-sink.
- * It also sends out traces periodically to update it's location in the network.
- * In upload scenario, this should run on a mobile node, 
- * and the trace is actually Interest packet aimed at a stationary server to which data is uploaded.
+ * @brief Ndn application that runs as the stationary server in upload scenarios supporting Kite scheme.
+ * This one is a server application, it waits for Interest packets from mobile nodes that serve as upload requests,
+ * It then sends out Interest towards the mobile node to pull the data it tries to upload.
+ * Currently, the name of the uploading mobile node is fixed.
+ * Eventually the upload request should include information about the mobile node,
+ * and certain verification machanisms should be applied so that this won't be exploited to conduct DDoS attacks.
  */
-class KiteUploadMobile : public Producer {
+class KitePushProducer : public Producer {
 public:
   static TypeId
-  GetTypeId(void);
+  GetTypeId();
 
-  KiteUploadMobile();
+  KitePushProducer();
+  virtual ~KitePushProducer() {};
 
-  void SendTrace(); // Periodically send trace Interest packets(IFI)
-
-  virtual void
+  virtual void 
   OnInterest(shared_ptr<const Interest> interest);
 
-protected:
-  // inherited from Application base class.
-  virtual void
-  StartApplication(); // Called at time specified by Start
-
-  virtual void
-  StopApplication(); // Called at time specified by Stop
-
   /**
-   * @brief Set type of frequency randomization
-   * @param value Either 'none', 'uniform', or 'exponential'
+   * @brief Actually send packet, with TraceFlag option
    */
   void
-  SetRandomize(const std::string& value);
+  SendInterest();
+
+protected:
+  // from App
+  virtual void
+  StartApplication();
 
   /**
-   * @brief Get type of frequency randomization
-   * @returns either 'none', 'uniform', or 'exponential'
+   * \brief Actually does nothing.
    */
-  std::string
-  GetRandomize() const;
+  virtual void
+  ScheduleNextPacket() {};
 
-private:
+protected:
   Name m_serverPrefix;
-  Name m_mobilePrefix;
-  Time m_interestLifeTime; // LifeTime for interest packet(IFI)
+  Name m_traceNamePrefix;
+  Time m_tracingInterestLifeTime;
 
   Ptr<UniformRandomVariable> m_rand; ///< @brief nonce generator
   Ptr<RandomVariableStream> m_random;
@@ -89,4 +83,4 @@ private:
 } // namespace ndn
 } // namespace ns3
 
-#endif // NDN_PRODUCER_H
+#endif

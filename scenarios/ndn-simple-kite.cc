@@ -75,10 +75,9 @@ main(int argc, char* argv[])
   ndnHelper.InstallAll();
 
   // Choosing forwarding strategy
-  //ndn::StrategyChoiceHelper::Install(nodes.Get(0), "/", "/localhost/nfd/strategy/kite-trace");
-  //ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/kite-trace");
-  ndn::StrategyChoiceHelper::InstallAll<nfd::fw::KiteTraceStrategy>("/");
   //ndn::StrategyChoiceHelper::InstallAll<nfd::fw::KiteTraceStrategy>("/");
+  ndn::StrategyChoiceHelper::InstallAll("/", "/localhost/nfd/strategy/best-route");
+
 
   std::string serverPrefix = "/server";
   std::string mobilePrefix = "/mobile";
@@ -86,18 +85,21 @@ main(int argc, char* argv[])
   // Installing applications
 
   // Stationary server
-  ndn::AppHelper serverHelper("ns3::ndn::KiteUploadServer");
+  ndn::AppHelper serverHelper("ns3::ndn::ConsumerCbr");
   serverHelper.SetPrefix(mobilePrefix);
-  serverHelper.SetAttribute("ServerPrefix", StringValue(serverPrefix));
+  serverHelper.SetAttribute("Frequency", StringValue("10"));
+  //serverHelper.SetAttribute("ServerPrefix", StringValue(serverPrefix));
   serverHelper.Install(nodes.Get(0));                        // first node
 
   // Mobile node
-  ndn::AppHelper mobileNodeHelper("ns3::ndn::KiteUploadMobile");
+  ndn::AppHelper mobileNodeHelper("ns3::ndn::Producer");
   mobileNodeHelper.SetPrefix(mobilePrefix);
-  mobileNodeHelper.SetAttribute("ServerPrefix", StringValue(serverPrefix));
-  mobileNodeHelper.SetAttribute("MobilePrefix", StringValue(mobilePrefix));
+  //mobileNodeHelper.SetAttribute("ServerPrefix", StringValue(serverPrefix));
+  //mobileNodeHelper.SetAttribute("MobilePrefix", StringValue(mobilePrefix));
   mobileNodeHelper.SetAttribute("PayloadSize", StringValue("1024"));
   mobileNodeHelper.Install(nodes.Get(2)); // last node
+
+  ndn::AppDelayTracer::InstallAll("app-delay-trace-bestroute.txt");
 
   Simulator::Stop(Seconds(20.0));
 

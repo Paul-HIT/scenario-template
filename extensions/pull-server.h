@@ -17,8 +17,8 @@
  * ndnSIM, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  **/
 
-#ifndef NDN_KITE_UPLOAD_SERVER_H
-#define NDN_KITE_UPLOAD_SERVER_H
+#ifndef NDN_KITE_PULL_SERVER_H
+#define NDN_KITE_PULL_SERVER_H
 
 #include "ns3/ndnSIM/model/ndn-common.hpp"
 
@@ -36,17 +36,13 @@ namespace ndn {
  * Eventually the upload request should include information about the mobile node,
  * and certain verification machanisms should be applied so that this won't be exploited to conduct DDoS attacks.
  */
-class KiteUploadServer : public Consumer {
+class KitePullServer : public Consumer {
 public:
   static TypeId
   GetTypeId();
 
-  KiteUploadServer();
-  virtual ~KiteUploadServer() {};
-
-  // inherited from NdnApp
-  virtual void
-  OnInterest(shared_ptr<const Interest> interest);
+  KitePullServer();
+  virtual ~KitePullServer() {};
 
   virtual void
   OnData(shared_ptr<const Data> data);
@@ -55,7 +51,7 @@ public:
    * @brief Actually send packet, with TraceFlag option
    */
   void
-  SendInterest(shared_ptr<const Interest> tracedInterest, uint8_t traceFlag = 0);
+  SendInterest();
 
 protected:
   // from App
@@ -70,6 +66,7 @@ protected:
 
 protected:
   // m_interestName inherited from Consumer
+  Name m_traceNamePrefix;
   Name m_serverPrefix;
   Time m_tracingInterestLifeTime;
 };

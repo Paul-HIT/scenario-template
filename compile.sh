@@ -8,6 +8,7 @@ cd ../ns-3
 
 ./waf install
 
-cd ../test05082017
+cd ../test05142017
 
 ./waf configure --debug
+

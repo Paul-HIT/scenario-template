@@ -17,8 +17,8 @@
  * ndnSIM, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  **/
 
-#ifndef NDN_KITE_UPLOAD_MOBILE_H
-#define NDN_KITE_UPLOAD_MOBILE_H
+#ifndef NDN_KITE_PULL_MOBILE_H
+#define NDN_KITE_PULL_MOBILE_H
 
 #include "ns3/ndnSIM/model/ndn-common.hpp"
 
@@ -37,17 +37,19 @@ namespace ndn {
  *
  * A simple Interest-sink.
  * It also sends out traces periodically to update it's location in the network.
- * In upload scenario, this should run on a mobile node, 
- * and the trace is actually Interest packet aimed at a stationary server to which data is uploaded.
+ * In pull scenario, this should run on a mobile node, 
+ * and the trace will be set up through an anchor,
+ * which is a normal forwarding node that states a special prefix in the topology.
  */
-class KiteUploadMobile : public Producer {
+class KitePullMobile : public Producer {
 public:
   static TypeId
   GetTypeId(void);
 
-  KiteUploadMobile();
+  KitePullMobile();
+  virtual ~KitePullMobile() {};
 
-  void SendTrace(); // Periodically send trace Interest packets(IFI)
+  void SendTrace(); // Periodically send traced Interest packets(IFI)
 
   virtual void
   OnInterest(shared_ptr<const Interest> interest);
@@ -75,8 +77,8 @@ protected:
   GetRandomize() const;
 
 private:
+  Name m_anchorPrefix;
   Name m_serverPrefix;
-  Name m_mobilePrefix;
   Time m_interestLifeTime; // LifeTime for interest packet(IFI)
 
   Ptr<UniformRandomVariable> m_rand; ///< @brief nonce generator

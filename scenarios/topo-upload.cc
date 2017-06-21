@@ -5,11 +5,12 @@
  * Author: Peng Yu
  **/
 
-// ndn-simple-kite.cpp
+// topo-upload.cpp
 
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/point-to-point-module.h"
+#include "ns3/point-to-point-layout-module.h"
 #include "ns3/ndnSIM-module.h"
 
 #include "ns3/wifi-module.h"
@@ -44,7 +45,7 @@ main(int argc, char* argv[])
   int isKite = 1;
   int gridSize = 3;
   int mobileSize = 1;
-  int speed = 100;        //100
+  int speed = 60;        //100
   int stopTime = 100;
   int joinTime = 1;
 
@@ -59,25 +60,13 @@ main(int argc, char* argv[])
   cmd.Parse(argc, argv);
 
   // Creating nodes
-  NodeContainer nodes;
-  nodes.Create(4);
-
-  MobilityHelper mobility;
-  Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
-  posAlloc->Add (Vector (0.0, 0.0, 0.0));
-  posAlloc->Add (Vector (100.0, 0.0, 0.0));
-  posAlloc->Add (Vector (200.0, 100.0, 0.0));
-  posAlloc->Add (Vector (200.0, -100.0, 0.0));
-  mobility.SetPositionAllocator (posAlloc);
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  mobility.Install (nodes);
-
   PointToPointHelper p2p;
-  p2p.Install(nodes.Get(0), nodes.Get(1));
-  p2p.Install(nodes.Get(1), nodes.Get(2));
-  p2p.Install(nodes.Get(1), nodes.Get(3));
+  PointToPointGridHelper grid (gridSize, gridSize, p2p);
+  grid.BoundingBox(0,0,400,400);
+
 
   // Create mobile nodes
+  NodeContainer wifiNodes;
   NodeContainer mobileNodes;
   mobileNodes.Create (mobileSize);
 
@@ -85,29 +74,30 @@ main(int argc, char* argv[])
   Ptr<RandomRectanglePositionAllocator> randomPosAlloc = CreateObject<RandomRectanglePositionAllocator> ();
   Ptr<UniformRandomVariable> x = CreateObject<UniformRandomVariable> ();
   x->SetAttribute ("Min", DoubleValue (200));
-  x->SetAttribute ("Max", DoubleValue (250));
+  x->SetAttribute ("Max", DoubleValue (450));
   randomPosAlloc->SetX (x);
     Ptr<UniformRandomVariable> y = CreateObject<UniformRandomVariable> ();
-  y->SetAttribute ("Min", DoubleValue (-100));
-  y->SetAttribute ("Max", DoubleValue (100));
+  y->SetAttribute ("Min", DoubleValue (250));
+  y->SetAttribute ("Max", DoubleValue (500));
   randomPosAlloc->SetY (y);
 
+  MobilityHelper mobility;
   mobility.SetPositionAllocator(randomPosAlloc);
   std::stringstream ss;
   ss << "ns3::UniformRandomVariable[Min=" << speed << "|Max=" << speed << "]";
 
   mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
-    "Bounds", RectangleValue (Rectangle (200, 250, -100, 100)),
-    "Distance", DoubleValue (200),
+    "Bounds", RectangleValue (Rectangle (200, 450, 250, 500)),
+    "Distance", DoubleValue (150),
     "Speed", StringValue (ss.str ()));
 
   // Make mobile nodes move
   mobility.Install (mobileNodes);
 
   // Setup initial position of mobile node
-  posAlloc = CreateObject<ListPositionAllocator> ();
+  Ptr<ListPositionAllocator> posAlloc = CreateObject<ListPositionAllocator> ();
   //posAlloc->Add (Vector (200.0, 30.0, 0.0));
-  posAlloc->Add (Vector (230.0, -60.0, 0.0));
+  posAlloc->Add (Vector (450.0, 500.0, 0.0));
   mobility.SetPositionAllocator (posAlloc);
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (mobileNodes);
@@ -128,11 +118,9 @@ main(int argc, char* argv[])
   wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO);
   YansWifiChannelHelper wifiChannel;
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel", "Exponent", DoubleValue (3));
+  wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel", "Exponent", DoubleValue (3.35));
   wifiPhy.SetChannel (wifiChannel.Create ());
-  wifi.Install (wifiPhy, wifiMac, mobileNodes);
-  wifi.Install (wifiPhy, wifiMac, nodes.Get(2));
-  wifi.Install (wifiPhy, wifiMac, nodes.Get(3));
+  wifi.Install (wifiPhy, wifiMac, wifiNodes.GetGlobal());
 
   ndn::StackHelper ndnHelper;
   ndnHelper.SetDefaultRoutes(true);
@@ -147,14 +135,25 @@ main(int argc, char* argv[])
   std::string serverPrefix = "/server";
   std::string mobilePrefix = "/mobile";
 
-  ndn::FibHelper::AddRoute (nodes.Get(1), serverPrefix, nodes.Get(0), 1);
+  
+  for (int i = 0; i<gridSize; i++)
+  {
+    for (int j = 0; j<gridSize; j++)
+    {
+        //ndnHelper.Install (grid.GetNode (i, j));
+        if (i ==0 && j==0) continue;
+        int m = i>j ? (i - 1) : i;
+        int n = i>j ? j : (j - 1);
+        ndn::FibHelper::AddRoute (grid.GetNode (i, j), serverPrefix, grid.GetNode (m, n), 1);
+    }
+  }
 
   // Installing applications
   // Stationary server
   ndn::AppHelper serverHelper("ns3::ndn::KiteUploadServer");
   serverHelper.SetPrefix(mobilePrefix);
   serverHelper.SetAttribute("ServerPrefix", StringValue(serverPrefix));
-  serverHelper.Install(nodes.Get(0));                        // first node
+  serverHelper.Install(grid.GetNode(0, 0));                        // first node
 
   // Mobile node
   ndn::AppHelper mobileNodeHelper("ns3::ndn::KiteUploadMobile");
@@ -164,11 +163,11 @@ main(int argc, char* argv[])
   mobileNodeHelper.SetAttribute("PayloadSize", StringValue("1024"));
   mobileNodeHelper.Install(mobileNodes.Get(0)); // last node
 
-  L2RateTracer::InstallAll("drop-trace.txt", Seconds(0.5));
-  ndn::L3RateTracer::InstallAll("rate-trace.txt", Seconds(0.5));
+  L2RateTracer::InstallAll("drop-trace.txt", Seconds(5));
+  ndn::L3RateTracer::InstallAll("rate-trace.txt", Seconds(5));
   ndn::AppDelayTracer::InstallAll("app-delays-trace.txt");
 
-  Simulator::Stop(Seconds(20.0));
+  Simulator::Stop(Seconds(100.0));
 
   Simulator::Run();
   Simulator::Destroy();

@@ -17,8 +17,8 @@
  * ndnSIM, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  **/
 
-#ifndef NDN_KITE_UPLOAD_MOBILE_H
-#define NDN_KITE_UPLOAD_MOBILE_H
+#ifndef NDN_KITE_SHARE_MOBILE_H
+#define NDN_KITE_SHARE_MOBILE_H
 
 #include "ns3/ndnSIM/model/ndn-common.hpp"
 
@@ -37,20 +37,31 @@ namespace ndn {
  *
  * A simple Interest-sink.
  * It also sends out traces periodically to update it's location in the network.
- * In upload scenario, this should run on a mobile node, 
- * and the trace is actually Interest packet aimed at a stationary server to which data is uploaded.
+ * In pull scenario, this should run on a mobile node, 
+ * and the trace will be set up through an anchor,
+ * which is a normal forwarding node that states a special prefix in the topology.
  */
-class KiteUploadMobile : public Producer {
+class KiteShareMobile : public Producer {
 public:
   static TypeId
   GetTypeId(void);
 
-  KiteUploadMobile();
+  KiteShareMobile();
+  virtual ~KiteShareMobile() {};
 
-  void SendTrace(); // Periodically send trace Interest packets(IFI)
+  void SendTrace(); // Periodically send traced Interest packets with TraceName
 
   virtual void
   OnInterest(shared_ptr<const Interest> interest);
+
+  virtual void
+  OnData(shared_ptr<const Data> data);
+
+  /**
+   * @brief Send traceOnly Interest for data from other joiner.
+   */
+  void
+  SendTracingInterest();
 
 protected:
   // inherited from Application base class.
@@ -59,6 +70,16 @@ protected:
 
   virtual void
   StopApplication(); // Called at time specified by Stop
+
+  /**
+    * \struct contains sequence numbers of packets to be retransmitted
+    */
+  struct RetxSeqsContainer : public std::set<uint32_t>
+  {
+    
+  };
+
+  RetxSeqsContainer m_retxSeqs;
 
   /**
    * @brief Set type of frequency randomization
@@ -75,15 +96,16 @@ protected:
   GetRandomize() const;
 
 private:
-  Name m_serverPrefix;
-  Name m_mobilePrefix;
+  Name m_chatRoomPrefix;
+  Name m_dataPrefix;
   Time m_interestLifeTime; // LifeTime for interest packet(IFI)
+  Time m_tracingInterestLifeTime;
 
   Ptr<UniformRandomVariable> m_rand; ///< @brief nonce generator
   Ptr<RandomVariableStream> m_random;
   std::string m_randomType;
   
-  int m_seq;
+  uint32_t m_seq;
 };
 
 } // namespace ndn

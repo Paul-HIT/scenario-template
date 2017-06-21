@@ -17,16 +17,13 @@
  * ndnSIM, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  **/
 
-#ifndef NDN_KITE_UPLOAD_MOBILE_H
-#define NDN_KITE_UPLOAD_MOBILE_H
+#ifndef NDN_KITE_PUSH_CONSUMER_H
+#define NDN_KITE_PUSH_CONSUMER_H
+
 
 #include "ns3/ndnSIM/model/ndn-common.hpp"
 
-#include "ns3/random-variable-stream.h"
-#include "ns3/nstime.h"
-#include "ns3/ptr.h"
-
-#include "ns3/ndnSIM/apps/ndn-producer.hpp"
+#include "ns3/ndnSIM/apps/ndn-consumer.hpp"
 
 namespace ns3 {
 namespace ndn {
@@ -37,17 +34,19 @@ namespace ndn {
  *
  * A simple Interest-sink.
  * It also sends out traces periodically to update it's location in the network.
- * In upload scenario, this should run on a mobile node, 
- * and the trace is actually Interest packet aimed at a stationary server to which data is uploaded.
+ * In pull scenario, this should run on a mobile node, 
+ * and the trace will be set up through an anchor,
+ * which is a normal forwarding node that states a special prefix in the topology.
  */
-class KiteUploadMobile : public Producer {
+class KitePushConsumer : public Consumer {
 public:
   static TypeId
   GetTypeId(void);
 
-  KiteUploadMobile();
+  KitePushConsumer();
+  virtual ~KitePushConsumer() {};
 
-  void SendTrace(); // Periodically send trace Interest packets(IFI)
+  void SendTrace(); // Periodically send traced Interest packets(IFI)
 
   virtual void
   OnInterest(shared_ptr<const Interest> interest);
@@ -61,29 +60,17 @@ protected:
   StopApplication(); // Called at time specified by Stop
 
   /**
-   * @brief Set type of frequency randomization
-   * @param value Either 'none', 'uniform', or 'exponential'
+   * \brief Actually does nothing.
    */
-  void
-  SetRandomize(const std::string& value);
-
-  /**
-   * @brief Get type of frequency randomization
-   * @returns either 'none', 'uniform', or 'exponential'
-   */
-  std::string
-  GetRandomize() const;
+  virtual void
+  ScheduleNextPacket() {};
 
 private:
+  Name m_anchorPrefix;
   Name m_serverPrefix;
-  Name m_mobilePrefix;
+  Name m_traceNamePrefix;
   Time m_interestLifeTime; // LifeTime for interest packet(IFI)
-
-  Ptr<UniformRandomVariable> m_rand; ///< @brief nonce generator
-  Ptr<RandomVariableStream> m_random;
-  std::string m_randomType;
   
-  int m_seq;
 };
 
 } // namespace ndn

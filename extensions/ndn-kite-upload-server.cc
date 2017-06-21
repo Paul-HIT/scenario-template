@@ -143,7 +143,7 @@ KiteUploadServer::SendInterest(shared_ptr<const Interest> tracedInterest, uint8_
 
   NS_LOG_INFO("node(" << GetNode()->GetId() << ") received IFI with name: " << tracedInterest->getName() << ", Nonce: " << tracedInterest->getNonce());
 
-  uint32_t seq = std::numeric_limits<uint32_t>::max(); // invalid
+  /*uint32_t seq = std::numeric_limits<uint32_t>::max(); // invalid
 
   while (m_retxSeqs.size()) {
     seq = *m_retxSeqs.begin();
@@ -159,7 +159,8 @@ KiteUploadServer::SendInterest(shared_ptr<const Interest> tracedInterest, uint8_
     }
 
     seq = m_seq++;
-  }
+  }*/
+  uint32_t seq = m_seq++;
 
   shared_ptr<Name> nameWithSequence = make_shared<Name>(m_interestName);
   nameWithSequence->appendSequenceNumber(seq);
@@ -186,10 +187,15 @@ KiteUploadServer::SendInterest(shared_ptr<const Interest> tracedInterest, uint8_
   ScheduleNextPacket();
 }
 
+std::set<std::string> s;
+
 void 
 KiteUploadServer::OnData(shared_ptr<const Data> data)
 {
   NS_LOG_INFO("Server: receive Data: " << data->getName());
+  
+  s.insert(data->getName().toUri());
+  NS_LOG_INFO("CURRENT Data ammount: "<< data->getName().toUri() << ": " << s.size());
 }
 
 } // namespace ndn
